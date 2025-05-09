@@ -78,47 +78,47 @@ model Verification {
 
 
 model Source {
-  id          String             @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
-  filePath    String
-  fileType    String
-  user        User               @relation(fields: [userId], references: [id])
+  fileName    String
+  mimeType    String
+  size        Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   userId      String
-  sessions    ChatSession[]      @relation("SessionSources")
-  messageRefs MessageSourceRef[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatSessions ChatSession[]
+  sourceRefs  SourceRef[]
 }
 
 model ChatSession {
-  id          String        @id @default(cuid())
-  title       String?
-  userId      String
-  user        User          @relation(fields: [userId], references: [id])
-  messages    ChatMessage[]
-  sources     Source[]      @relation("SessionSources")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id        String        @id @default(cuid())
+  title     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+  sources   Source[]
 }
 
 model ChatMessage {
-  id          String             @id @default(cuid())
-  sessionId   String
-  session     ChatSession        @relation(fields: [sessionId], references: [id])
-  content     String
-  role        Role
-  sourceRefs  MessageSourceRef[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id         String       @id @default(cuid())
+  content    String
+  role       Role
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  sessionId  String
+  session    ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sourceRefs SourceRef[]
 }
 
-model MessageSourceRef {
-  id         String       @id @default(cuid())
-  messageId  String
-  sourceId   String
-  page       Int?
-  snippet    String?
-
-  message    ChatMessage  @relation(fields: [messageId], references: [id])
-  source     Source       @relation(fields: [sourceId], references: [id])
+model SourceRef {
+  id        String      @id @default(cuid())
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sourceId  String
+  source    Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  quote     String?
+  pageNumber Int?
 }
