@@ -1,0 +1,11 @@
+{
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "dsdsds",
+            "connectString": "postgres://postgres:postgres@localhost:5432/graphy"
+        }
+    ]
+}
