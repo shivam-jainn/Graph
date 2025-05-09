@@ -120,3 +120,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* Example: Add to your global CSS file */
+table {
+  border-collapse: collapse;
+  width: auto; /* Or 100% if you want full width within the bubble */
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border: 1px solid #555; /* Adjusted for a dark theme, you can pick your color */
+  color: #ddd; /* Text color for table content, adjust as needed */
+}
+
+th, td {
+  border: 1px solid #555; /* Adjusted for a dark theme */
+  padding: 0.5em;
+  text-align: left;
+}
+
+thead {
+  background-color: #333; /* Example header background for a dark theme */
+}
+
+/* Optional: If you want to ensure table text isn't white like the bubble's default */
+.max-w-md td, .max-w-md th {
+  color: #ccc; /* Or whatever color contrasts well with your cell/header backgrounds */
+}

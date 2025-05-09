@@ -15,5 +15,6 @@ export async function POST(req: Request) {
     if no relevant information is found in the tool calls, respond, "Sorry, I don't know."`
   });
 
+  console.log(result);
   return result.toDataStreamResponse();
 }

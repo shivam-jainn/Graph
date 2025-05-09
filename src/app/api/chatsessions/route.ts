@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionCookie } from 'better-auth/cookies'
 import { getSession } from '@/lib/auth-client'
+import {auth} from '@/lib/auth'
+import { headers } from 'next/headers'
 
 export async function GET(req: NextRequest) {
-  const { data: session } = await getSession()
+  
+  const session = await auth.api.getSession({
+    headers : await headers()
+  })
+
   const userId = session?.user?.id
-
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const sessions = await prisma.chatSession.findMany({
+  
+  const chatSessions = await prisma.chatSession.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
     select: {
@@ -22,26 +28,26 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json(sessions)
+  return NextResponse.json(chatSessions)
 }
 
 export async function POST(req: NextRequest) {
-  const { data: session } = await getSession()
+  const session = await auth.api.getSession({
+    headers : await headers()
+  })
+
   const userId = session?.user?.id
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { title, sourceIds } = body
+  const { title } = body
 
-  const createdSession = await prisma.chatSession.create({
+  const createdChatSession = await prisma.chatSession.create({
     data: {
       title,
-      userId,
-      sources: sourceIds && sourceIds.length > 0
-        ? { connect: sourceIds.map((id: string) => ({ id })) }
-        : undefined,
+      userId
     },
   })
 
-  return NextResponse.json(createdSession)
+  return NextResponse.json(createdChatSession)
 }
