@@ -19,8 +19,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse form data
-    const formData = await req.formData();
+    // Parse form data with error handling
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      console.error('Error parsing form data:', error);
+      return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    }
+    
     const file = formData.get('file') as File;
     const sessionId = formData.get('sessionId') as string;
     
@@ -59,24 +66,39 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Process the PDF
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const docs = await processPdf(buffer);
-    
-    // Prepare documents for embedding
-    const vectorDocs = prepareDocsForEmbedding(docs, source.id, file.name);
-    
-    // Generate embeddings
-    const texts = vectorDocs.map(doc => doc.metadata.text);
-    const embeddings = await generateEmbeddings(texts);
-    
-    // Add embeddings to vector documents
-    for (let i = 0; i < vectorDocs.length; i++) {
-      vectorDocs[i].values = embeddings[i];
+    try {
+      // Process the PDF
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const docs = await processPdf(buffer);
+      
+      // Prepare documents for embedding
+      const vectorDocs = prepareDocsForEmbedding(docs, source.id, file.name);
+      
+      // Generate embeddings
+      const texts = vectorDocs.map(doc => doc.metadata.text);
+      const embeddings = await generateEmbeddings(texts);
+      
+      // Add embeddings to vector documents
+      for (let i = 0; i < vectorDocs.length; i++) {
+        vectorDocs[i].values = embeddings[i];
+      }
+      
+      // Store in Pinecone
+      await storeEmbeddings(vectorDocs);
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      // Still return success with the source, but log the error
+      // This allows the UI to continue working even if PDF processing fails
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'File uploaded but processing failed. Please try again later.',
+        source: {
+          id: source.id,
+          title: source.title,
+          fileName: source.fileName
+        }
+      });
     }
-    
-    // Store in Pinecone
-    await storeEmbeddings(vectorDocs);
 
     return NextResponse.json({ 
       success: true, 

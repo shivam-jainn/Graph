@@ -13,6 +13,7 @@ export default function ChatUI() {
   const [existingMessages, setExistingMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Initialize chat with ID if available
   const { messages, input, handleInputChange, handleSubmit, isLoading: isChatLoading } = useChat({
@@ -127,9 +128,40 @@ export default function ChatUI() {
     }
   };
 
+  // Function to upload files
+  const uploadFiles = async (files: File[], sessionId: string) => {
+    const uploadPromises = files.map(async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('sessionId', sessionId);
+      
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        throw error;
+      }
+    });
+    
+    return Promise.all(uploadPromises);
+  };
+
   // Custom submit handler to create session if needed and store user message
-  const handleMessageSubmit = async (e) => {
+  const handleMessageSubmit = async (e, files: File[] = []) => {
     e.preventDefault();
+    
+    // Don't proceed if there's no input and no files
+    if (input.trim() === '' && files.length === 0) return;
     
     // If this is a new chat (no chatId) and first message, create session first
     if (!chatId && messages.length === 0 && !sessionCreated) {
@@ -139,22 +171,48 @@ export default function ChatUI() {
       if (title) {
         setSessionCreated(true); // Prevent multiple creations
         
-        // Let the original submit handler process the message
-        handleSubmit(e);
-        
-        // Create the session after submitting but don't redirect
+        // Create the session first
         const newChatId = await createNewChatSession(title);
         
-        // Store the user message in the database
         if (newChatId) {
+          // Upload files if any
+          if (files.length > 0) {
+            setIsUploading(true);
+            try {
+              await uploadFiles(files, newChatId);
+            } catch (error) {
+              console.error("Error uploading files:", error);
+              alert("Failed to upload one or more files");
+            } finally {
+              setIsUploading(false);
+            }
+          }
+          
+          // Store the user message in the database
           await storeMessage({
             content: input,
             role: 'user',
             sessionId: newChatId
           });
+          
+          // Let the original submit handler process the message
+          handleSubmit(e);
         }
       }
     } else if (chatId) {
+      // Upload files if any
+      if (files.length > 0) {
+        setIsUploading(true);
+        try {
+          await uploadFiles(files, chatId);
+        } catch (error) {
+          console.error("Error uploading files:", error);
+          alert("Failed to upload one or more files");
+        } finally {
+          setIsUploading(false);
+        }
+      }
+      
       // Only store the message if we have a valid chatId
       await storeMessage({
         content: input,
@@ -231,9 +289,11 @@ export default function ChatUI() {
             />
           ))
         )}
-        {isChatLoading && (
+        {(isChatLoading || isUploading) && (
           <div className="text-center py-2">
-            <span className="animate-pulse">AI is thinking...</span>
+            <span className="animate-pulse">
+              {isUploading ? "Uploading files..." : "AI is thinking..."}
+            </span>
           </div>
         )}
       </div>
